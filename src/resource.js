@@ -2,6 +2,8 @@ var res = {
     HelloWorld_png : "res/HelloWorld.png",
     MainScene_json : "res/MainScene.json",
     poke_wav : "res/poke.wav",
+    hb_wav : "res/hb.wav",
+    ppp_wav : "res/ppp.wav",
     hb_png:"res/hb.png",
     paopao1_1png:"res/paopao1_1.png",
     paopao1_2png:"res/paopao1_2.png",

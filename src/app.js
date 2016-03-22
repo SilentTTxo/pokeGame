@@ -45,6 +45,7 @@ var HelloWorldLayer = cc.Layer.extend({
         // ask the window size
         var size = cc.winSize;
 
+        this.userName = "";
         this.finalTime = 0;
         this.tpaopao = MAX_PAOPAO;
         this.time = 0;
@@ -111,17 +112,18 @@ var HelloWorldLayer = cc.Layer.extend({
         this.addChild(this._debugNode);
     },
     getUserInfo: function () {
-        id = $_GET['id'];
+        member_id = $_GET['member_id'];
         var that = this;
         var xhr = cc.loader.getXMLHttpRequest();
         //set arguments with <url>?xxx=xxx&yyy=yyy
-        xhr.open("GET", "http://1.teststudent.sinaapp.com/data.php?id=1", true);
+        xhr.open("POST", "http://1.teststudent.sinaapp.com/data.php");
+        xhr.setRequestHeader("Content-Type","application/x-www-form-urlencoded");
         xhr.onreadystatechange = function () {
             if (xhr.readyState == 4 && (xhr.status >= 200 && xhr.status <= 207)) {
                 var httpStatus = xhr.statusText;
                 var response = xhr.responseText;
                 var JsonData = eval('(' + response + ')');
-                cc.log(JsonData.userimg);
+                cc.log(JsonData.head_img);
                 size = cc.winSize;
                 //add Userimg
 
@@ -134,7 +136,7 @@ var HelloWorldLayer = cc.Layer.extend({
                 clper.setPosition(size.width*3/8,size.height*19/20);
                 clper.stencil = shape;
                 
-                sp = new cc.Sprite(JsonData.userimg);
+                sp = new cc.Sprite(JsonData.head_img);
                 sp.setPosition(0,0);
                 sp.setScale(0.25,0.25);
 
@@ -142,9 +144,12 @@ var HelloWorldLayer = cc.Layer.extend({
                 clper.setLocalZOrder(2);
 
                 that.addChild(clper);
+                //add Username
+                //that.userName = JsonData.member_name;
             }
         };
-        xhr.send();
+        var args = "member_id="+member_id+"&token=jitlgj3l040me3npp69jvj4r60";
+        xhr.send(args);
     },
     onEnter: function () {  
         this._super();  
@@ -194,7 +199,7 @@ var HelloWorldLayer = cc.Layer.extend({
        // 设置重力
         var tLayer = this;
        this.space = new cp.Space();
-       this.space.gravity = cp.v(0, -300);
+       this.space.gravity = cp.v(0, -600);
        var staticBody = this.space.staticBody;
 
        // 设置重力感应
@@ -310,6 +315,7 @@ var HelloWorldLayer = cc.Layer.extend({
                 var action = cc.sequence(cc.animate(animation),cc.callFunc(tLayer.removePaoPao, target, true));
 
                 if(Math.floor(Math.random()*HB_Probability)+1==HB_Probability){
+                    cc.audioEngine.playEffect(res.hb_wav);
                     sp = new cc.Sprite("res/hb.png");
                     if(radius == 60){
                         sp.setScale(0.2,0.2);
@@ -350,7 +356,7 @@ var HelloWorldLayer = cc.Layer.extend({
         sp.removeFromParent(true);
     },
     update: function (dt) {  
-        var timeStep = 0.01;
+        var timeStep = 0.03;
         this.space.step(timeStep);
         if(this.paopao<MIN_PAOPAO&&this.tpaopao!=this.paopao){
             this.addNewSpriteAtPosition(cc.p(Math.floor(Math.random()*cc.winSize.width)+1,cc.winSize.height*9/10),Math.floor(Math.random()*15)+1,9);
