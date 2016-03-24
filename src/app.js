@@ -54,11 +54,11 @@ var HelloWorldLayer = cc.Layer.extend({
         this.hbnum = 0;
         this.addscore = true;
 
+        cc.spriteFrameCache.addSpriteFrames(res.poke_plist);
+
         var mainscene = ccs.load(res.MainScene_json);
         this.addChild(mainscene.node);
 
-        this.initPhysics();
-        this.scheduleUpdate(); 
 
         //label
         var timeLabel = new cc.LabelTTF("Time", "Arial", 30);
@@ -76,12 +76,81 @@ var HelloWorldLayer = cc.Layer.extend({
         hbnum.y = size.height*19/20;
         this.addChild(hbnum,2,HBNUM_TAG);
 
-        var hbsp = new cc.Sprite("res/hb.png");
+        var hbsp = new cc.Sprite(cc.spriteFrameCache.getSpriteFrame("hb.png"));
         hbsp.setScale(0.2,0.2);
         hbsp.setVisible(true);
         hbsp.setPosition(size.width*12/15,size.height*19/20);
         this.addChild(hbsp,2,233);
 
+        this.listener1 = cc.EventListener.create({
+        event: cc.EventListener.TOUCH_ONE_BY_ONE,
+        swallowTouches: true,                        // 设置是否吞没事件，在 onTouchBegan 方法返回 true 时吞掉事件，不再向下传递。
+        onTouchBegan: function (touch, event) {        //实现 onTouchBegan 事件处理回调函数
+            var target = event.getCurrentTarget();    // 获取事件所绑定的 target, 通常是cc.Node及其子类 
+            tLayer = target.getParent();
+
+            // 获取当前触摸点相对于按钮所在的坐标
+            var locationInNode = target.convertToNodeSpace(touch.getLocation());    
+            var s = target.getContentSize();
+            var rect = cc.rect(0, 0, s.width, s.height);
+
+            if (cc.rectContainsPoint(rect, locationInNode)) {        // 判断触摸点是否在按钮范围内
+                cc.log("sprite began... x = " + locationInNode.x + ", y = " + locationInNode.y);
+                //target.opacity = 180;
+
+                tLayer.tpaopao-=1;
+                cc.eventManager.removeListener(this);
+                if(tLayer.addscore){
+                    tLayer.paopao -= 1;
+                    /*if((target.getName()-1)%3==1) tLayer.score+=150;
+                    else tLayer.score +=100;*/
+                    var label3 = tLayer.getChildByTag(SCORE_TAG);
+                    label3.setString(tLayer.tpaopao);
+                }
+
+                cc.audioEngine.playEffect(res.poke_wav);
+                //target._texture.url
+                var animation = cc.Animation.create();
+                var str = "";
+                for (var i = 2; i < 10; i++) {
+                    str = "paopao" + target.getName() + "_" + i + ".png";
+                    animation.addSpriteFrame(cc.spriteFrameCache.getSpriteFrame(str));
+                }
+                animation.setDelayPerUnit(0.03);
+                var action = cc.sequence(cc.animate(animation),cc.callFunc(tLayer.removePaoPao, target, true));
+
+                if(Math.floor(Math.random()*HB_Probability)+1==HB_Probability){
+                    cc.audioEngine.playEffect(res.hb_wav);
+                    sp = new cc.Sprite(cc.spriteFrameCache.getSpriteFrame("hb.png"));
+                    if(radius == 60){
+                        sp.setScale(0.2,0.2);
+                    }
+                    else {
+                        sp.setScale(0.15,0.15);
+                    }
+                    sp.setPosition(target.getPosition());
+                    tLayer.addChild(sp);
+                    mvac = cc.moveTo(0.5,tLayer.getChildByTag(233).getPosition());
+                    var ac = cc.sequence(mvac,cc.callFunc(tLayer.removehb, sp, true));
+                    sp.runAction(mvac);
+
+                    if(tLayer.addscore){
+                        tLayer.hbnum +=1;
+                        var label2 = tLayer.getChildByTag(HBNUM_TAG);
+                        label2.setString("X "+tLayer.hbnum);
+                    }
+                }
+
+                target.runAction(action);
+
+                
+                return true;
+            }
+            return false;
+        }
+    });
+        this.initPhysics();
+        this.scheduleUpdate(); 
         return true;
     },
     setupDebugNode: function () {
@@ -130,7 +199,6 @@ var HelloWorldLayer = cc.Layer.extend({
         xhr.send(args);
     },
     sendResult: function () {//获取用户信息--修正Result
-
         var that = this;
         var xhr = cc.loader.getXMLHttpRequest();
         xhr.open("POST", "http://1.teststudent.sinaapp.com/data.php");//目标地址
@@ -182,15 +250,9 @@ var HelloWorldLayer = cc.Layer.extend({
         cc.eventManager.removeListeners(cc.EventListener.TOUCH_ONE_BY_ONE);  
     },
     initPhysics: function () {//初始化物理引擎  
-  
-  
        var winSize = cc.director.getWinSize();  
-  
-  
        //this.space = new cp.Space(); 
        this.setupDebugNode(); 
-  
-  
        // 设置重力
         var tLayer = this;
        this.space = new cp.Space();
@@ -262,8 +324,8 @@ var HelloWorldLayer = cc.Layer.extend({
   
   
      //创建物理引擎精灵对象 
-     var pngName = "res/paopao"+x+"_1.png"; 
-     var sprite = new cc.PhysicsSprite(pngName);
+     var pngName = "paopao"+x+"_1.png"; 
+     var sprite = new cc.PhysicsSprite(cc.spriteFrameCache.getSpriteFrame(pngName));
      sprite.setTag(tag);
      sprite.setBody(body);  
      sprite.setPosition(cc.p(p.x, p.y));
@@ -272,74 +334,7 @@ var HelloWorldLayer = cc.Layer.extend({
 
 
     //  设置点击事件
-     var listener1 = cc.EventListener.create({
-        event: cc.EventListener.TOUCH_ONE_BY_ONE,
-        swallowTouches: true,                        // 设置是否吞没事件，在 onTouchBegan 方法返回 true 时吞掉事件，不再向下传递。
-        onTouchBegan: function (touch, event) {        //实现 onTouchBegan 事件处理回调函数
-            var target = event.getCurrentTarget();    // 获取事件所绑定的 target, 通常是cc.Node及其子类 
-            tLayer = target.getParent();
-
-            // 获取当前触摸点相对于按钮所在的坐标
-            var locationInNode = target.convertToNodeSpace(touch.getLocation());    
-            var s = target.getContentSize();
-            var rect = cc.rect(0, 0, s.width, s.height);
-
-            if (cc.rectContainsPoint(rect, locationInNode)) {        // 判断触摸点是否在按钮范围内
-                cc.log("sprite began... x = " + locationInNode.x + ", y = " + locationInNode.y);
-                //target.opacity = 180;
-
-                tLayer.tpaopao-=1;
-                cc.eventManager.removeListener(this);
-                if(tLayer.addscore){
-                    tLayer.paopao -= 1;
-                    /*if((target.getName()-1)%3==1) tLayer.score+=150;
-                    else tLayer.score +=100;*/
-                    var label3 = tLayer.getChildByTag(SCORE_TAG);
-                    label3.setString(tLayer.tpaopao);
-                }
-
-                cc.audioEngine.playEffect(res.poke_wav);
-                //target._texture.url
-                var animation = cc.Animation.create();
-                var str = "";
-                for (var i = 2; i < 10; i++) {
-                    str = "res/paopao" + target.getName() + "_" + i + ".png";
-                    animation.addSpriteFrameWithFile(str);
-                }
-                animation.setDelayPerUnit(0.03);
-                var action = cc.sequence(cc.animate(animation),cc.callFunc(tLayer.removePaoPao, target, true));
-
-                if(Math.floor(Math.random()*HB_Probability)+1==HB_Probability){
-                    cc.audioEngine.playEffect(res.hb_wav);
-                    sp = new cc.Sprite("res/hb.png");
-                    if(radius == 60){
-                        sp.setScale(0.2,0.2);
-                    }
-                    else {
-                        sp.setScale(0.15,0.15);
-                    }
-                    sp.setPosition(target.getPosition());
-                    tLayer.addChild(sp);
-                    mvac = cc.moveTo(0.5,tLayer.getChildByTag(233).getPosition());
-                    var ac = cc.sequence(mvac,cc.callFunc(tLayer.removehb, sp, true));
-                    sp.runAction(mvac);
-
-                    if(tLayer.addscore){
-                        tLayer.hbnum +=1;
-                        var label2 = tLayer.getChildByTag(HBNUM_TAG);
-                        label2.setString("X "+tLayer.hbnum);
-                    }
-                }
-
-                target.runAction(action);
-
-                
-                return true;
-            }
-            return false;
-        }
-    });
-    cc.eventManager.addListener(listener1, sprite);                                       
+    cc.eventManager.addListener(this.listener1.clone(), sprite);                                       
     this.addChild(sprite);                                               
     },
     removePaoPao: function(target){
