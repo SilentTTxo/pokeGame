@@ -11,10 +11,11 @@ var HBNUM_TAG = 66;
 var SUM_PAOPAO = 50;
 var MIN_PAOPAO = 35;
 var MAX_PAOPAO = 60;
-var HB_Probability = 25;
+var HB_Probability = 25;//--1/HB_Probability
+var IS_FIRSTTIME = true;
 
 
-var $_GET = (function(){
+var $_GET = (function(){//模拟php取值
     var url = window.document.location.href.toString();
     var u = url.split("?");
     if(typeof(u[1]) == "string"){
@@ -34,15 +35,14 @@ var $_GET = (function(){
 var HelloWorldLayer = cc.Layer.extend({
     sprite:null,
     ctor:function () {
-        //////////////////////////////
-        // 1. super init first
         this._super();
+        if(IS_FIRSTTIME){
+            IS_FIRSTTIME = false;
+            this.Start();
+            return;
+        }
         this.getUserInfo();
 
-        /////////////////////////////
-        // 2. add a menu item with "X" image, which is clicked to quit the program
-        //    you may modify it.
-        // ask the window size
         var size = cc.winSize;
 
         this.userName = "";
@@ -59,7 +59,6 @@ var HelloWorldLayer = cc.Layer.extend({
 
         this.initPhysics();
         this.scheduleUpdate(); 
-        this.schedule(this.step);
 
         //label
         var timeLabel = new cc.LabelTTF("Time", "Arial", 30);
@@ -83,27 +82,6 @@ var HelloWorldLayer = cc.Layer.extend({
         hbsp.setPosition(size.width*12/15,size.height*19/20);
         this.addChild(hbsp,2,233);
 
-        /* you can create scene with following comment code instead of using csb file.
-        /////////////////////////////
-        // 3. add your codes below...
-        // add a label shows "Hello World"
-        // create and initialize a label
-        var helloLabel = new cc.LabelTTF("Hello World", "Arial", 38);
-        // position the label on the center of the screen
-        helloLabel.x = size.width / 2;
-        helloLabel.y = size.height / 2 + 200;
-        // add the label as a child to this layer
-        this.addChild(helloLabel, 5);
-
-        // add "HelloWorld" splash screen"
-        this.sprite = new cc.Sprite(res.HelloWorld_png);
-        this.sprite.attr({
-            x: size.width / 2,
-            y: size.height / 2
-        });
-        this.addChild(this.sprite, 0);
-        */
-
         return true;
     },
     setupDebugNode: function () {
@@ -111,12 +89,51 @@ var HelloWorldLayer = cc.Layer.extend({
         this._debugNode.visible = DEBUG_NODE_SHOW;
         this.addChild(this._debugNode);
     },
-    getUserInfo: function () {
+    getUserInfo: function () {//获取用户信息
         member_id = $_GET['member_id'];
         var that = this;
         var xhr = cc.loader.getXMLHttpRequest();
         //set arguments with <url>?xxx=xxx&yyy=yyy
-        xhr.open("POST", "http://1.teststudent.sinaapp.com/data.php");
+        xhr.open("POST", "http://1.teststudent.sinaapp.com/data.php");//目标地址
+        xhr.setRequestHeader("Content-Type","application/x-www-form-urlencoded");
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState == 4 && (xhr.status >= 200 && xhr.status <= 207)) {
+                var httpStatus = xhr.statusText;
+                var response = xhr.responseText;
+                var JsonData = eval('(' + response + ')');
+                cc.log(JsonData.head_img);
+                size = cc.winSize;
+                //add Userimg
+
+
+                var shape = new cc.DrawNode();
+                var green = cc.color(0, 255, 0, 255);
+                shape.drawCircle(cc.p(0,0), 50, 8 , 400 , false , green);
+
+                var clper = new cc.ClippingNode();
+                clper.setPosition(size.width*3/8,size.height*19/20);
+                clper.stencil = shape;
+                
+                sp = new cc.Sprite(JsonData.head_img);
+                sp.setPosition(0,0);
+                sp.setScale(0.25,0.25);
+
+                clper.addChild(sp);
+                clper.setLocalZOrder(2);
+
+                that.addChild(clper);
+                //add Username
+                //that.userName = JsonData.member_name;
+            }
+        };
+        var args = "member_id="+member_id+"&token=jitlgj3l040me3npp69jvj4r60";
+        xhr.send(args);
+    },
+    sendResult: function () {//获取用户信息--修正Result
+
+        var that = this;
+        var xhr = cc.loader.getXMLHttpRequest();
+        xhr.open("POST", "http://1.teststudent.sinaapp.com/data.php");//目标地址
         xhr.setRequestHeader("Content-Type","application/x-www-form-urlencoded");
         xhr.onreadystatechange = function () {
             if (xhr.readyState == 4 && (xhr.status >= 200 && xhr.status <= 207)) {
@@ -159,34 +176,12 @@ var HelloWorldLayer = cc.Layer.extend({
             onTouchBegan: this.onTouchBegan  
         }, this);  
     },  
-    onTouchBegan: function (touch, event) {
-        /*if(SUM_PAOPAO<=50)  {
-            cc.log("onTouchBegan");  
-            var target = event.getCurrentTarget();  
-            var location = touch.getLocation();  
-            target.addNewSpriteAtPosition(location,Math.floor(Math.random()*24)+1);
-            SUM_PAOPAO++;
-        }
-        var target = event.getCurrentTarget();
-        for(y = 0;y<SUM_PAOPAO;y++){
-            pp = target.getChildByTag(y);
-            var nearestInfo = target.space.nearestPointQueryNearest(touch.getLocation(), 100, cp.ALL_LAYERS, cp.NO_GROUP);
-            if(nearestInfo.d < 0) {
-                xx = nearestInfo.shape.getBB();
-            }
-            if(target.paopaoDis(pp,touch)){
-                pp.remove();
-            }
-        }*/
-        //target.remove();
-        return false;  
-    },  
     onExit: function () {  
         this._super();  
         cc.log("onExit");  
         cc.eventManager.removeListeners(cc.EventListener.TOUCH_ONE_BY_ONE);  
     },
-    initPhysics: function () {  
+    initPhysics: function () {//初始化物理引擎  
   
   
        var winSize = cc.director.getWinSize();  
@@ -248,7 +243,7 @@ var HelloWorldLayer = cc.Layer.extend({
             this.addNewSpriteAtPosition(cc.p(Math.floor(Math.random()*cc.winSize.width)+1,Math.floor(Math.random()*cc.winSize.height)+1),Math.floor(Math.random()*15)+1,y);
        }
    },
-   addNewSpriteAtPosition: function (p,x,tag) {  
+   addNewSpriteAtPosition: function (p,x,tag) {  //添加小球
      cc.log("addNewSpriteAtPosition");  
      cc.log(x);
      if(x%3==0) x-=Math.floor(Math.random()*2)+1;
@@ -356,14 +351,8 @@ var HelloWorldLayer = cc.Layer.extend({
         sp.removeFromParent(true);
     },
     update: function (dt) {  
-        var timeStep = 0.03;
+        var timeStep = 0.05;
         this.space.step(timeStep);
-        if(this.paopao<MIN_PAOPAO&&this.tpaopao!=this.paopao){
-            this.addNewSpriteAtPosition(cc.p(Math.floor(Math.random()*cc.winSize.width)+1,cc.winSize.height*9/10),Math.floor(Math.random()*15)+1,9);
-            this.paopao+=1;
-        } 
-    },
-    step: function(dt){
         this.time += dt;
         if(this.tpaopao == 0) {
             this.gameOver();
@@ -371,6 +360,10 @@ var HelloWorldLayer = cc.Layer.extend({
         var label2 = this.getChildByTag(TIME_TAG);
         var string2 = this.time.toFixed(2);
         label2.setString(string2);
+        if(this.paopao<MIN_PAOPAO&&this.tpaopao!=this.paopao){
+            this.addNewSpriteAtPosition(cc.p(Math.floor(Math.random()*cc.winSize.width)+1,cc.winSize.height*9/10),Math.floor(Math.random()*15)+1,9);
+            this.paopao+=1;
+        } 
     },
     gameOver: function(){
         this.finalTime = this.time.toFixed(2);
@@ -386,7 +379,7 @@ var HelloWorldLayer = cc.Layer.extend({
         gameOver.addChild(titleLabel, 5);
         this.unscheduleAllCallbacks();
         var TryAgainItem = new cc.MenuItemFont(
-                "Try Again",
+                "再来一次！",
                 function () {
                     cc.log("Menu is clicked!");
                     self.removeFromParent(true);
@@ -407,6 +400,35 @@ var HelloWorldLayer = cc.Layer.extend({
         menu.y = 0;
         gameOver.addChild(menu, 1);
         this.getParent().addChild(gameOver);
+    },
+    Start: function(){
+        this.addscore = false;
+        var gameOver = new cc.LayerColor(cc.color(225,225,225,100));
+        var size = cc.winSize;
+        var self = this;
+        this.unscheduleAllCallbacks();
+        var TryAgainItem = new cc.MenuItemFont(
+                "Start!",
+                function () {
+                    cc.log("Menu is clicked!");
+                    self.removeFromParent(true);
+
+                    var transition= cc.TransitionFade.create(1, new HelloWorldScene(),cc.color(255,255,255,255));
+                    cc.director.runScene(transition);
+                }, this);
+        TryAgainItem.fontSize = 50;
+        TryAgainItem.attr({
+            x: size.width/2,
+            y: size.height / 2 - 100,
+            anchorX: 0.5,
+            anchorY: 0.5
+        });
+
+        var menu = new cc.Menu(TryAgainItem);
+        menu.x = 0;
+        menu.y = 0;
+        gameOver.addChild(menu, 1);
+        this.addChild(gameOver);
     }
 });
 
